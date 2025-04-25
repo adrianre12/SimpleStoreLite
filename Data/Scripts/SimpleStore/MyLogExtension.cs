@@ -1,6 +1,6 @@
 ﻿using VRage.Utils;
 
-namespace SimpleStore.StoreBlock
+namespace SimpleStoreLite.StoreBlock
 {
     public static class MyLogExtension
     {

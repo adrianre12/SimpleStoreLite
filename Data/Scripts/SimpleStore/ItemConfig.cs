@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using VRage.Game;
 using VRage.Utils;
 
-namespace SimpleStore.StoreBlock
+namespace SimpleStoreLite.StoreBlock
 {
     class ItemConfig
     {
@@ -29,7 +29,6 @@ namespace SimpleStore.StoreBlock
             private bool isPercent = false;
             private bool isAutoResell = false;
             private int resellCount = 0;
-            public bool IsAutoRefine { get; private set; } = false;
 
             public void SetAutoResell()
             {
@@ -91,7 +90,6 @@ namespace SimpleStore.StoreBlock
                 this.isAutoResell = false;
                 this.resellCount = 0;
                 this.max = 0;
-                this.IsAutoRefine = false;
 
                 string[] percentValue = strValue.Split('%');
                 switch (percentValue.Length)
@@ -301,7 +299,7 @@ namespace SimpleStore.StoreBlock
                 }
                 else
                 {
-                    MyLog.Default.WriteLine($"SimpleStore.StoreBlock: Warning: Recursive Prerequisite {item.Id.SubtypeName} using 0 price");
+                    MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: Warning: Recursive Prerequisite {item.Id.SubtypeName} using 0 price");
                 }
 
                 float num4 = (float)item.Amount / num;

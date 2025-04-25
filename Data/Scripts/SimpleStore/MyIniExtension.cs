@@ -3,7 +3,7 @@ using System.Text;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRage.Utils;
 
-namespace SimpleStore.StoreBlock
+namespace SimpleStoreLite.StoreBlock
 {
     public static class MyIniExtension
     {
@@ -16,7 +16,7 @@ namespace SimpleStore.StoreBlock
         {
             if (myIni == null)
             {
-                MyLog.Default.WriteLine($"SimpleStore.StoreBlock: ToStringSorted myIni=null");
+                MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: ToStringSorted myIni=null");
                 return "";
             }
             StringBuilder tmpContentBuilder = new StringBuilder();
@@ -32,7 +32,7 @@ namespace SimpleStore.StoreBlock
             myIni.GetSections(sections);
             if (sections == null)
             {
-                MyLog.Default.WriteLine($"SimpleStore.StoreBlock: ToStringSorted sections=null");
+                MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: ToStringSorted sections=null");
                 return "";
             }
 
