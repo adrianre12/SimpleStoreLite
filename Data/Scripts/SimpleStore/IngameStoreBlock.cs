@@ -35,7 +35,6 @@ namespace SimpleStoreLite.StoreBlock
         bool lastBlockEnabledState = false;
         bool UpdateShop = true;
         int UpdateCounter = 0;
-        bool resellItems = false; //deprecated
         int refreshCounterLimit = DefaultRefreshPeriod;
         bool debugLog = false;
 
@@ -123,10 +122,8 @@ namespace SimpleStoreLite.StoreBlock
                 var currentInvItemAmount = MyVisualScriptLogicProvider.GetEntityInventoryItemAmount(myStoreBlock.Name, definition.Id);
                 MyVisualScriptLogicProvider.RemoveFromEntityInventory(myStoreBlock.Name, definition.Id, currentInvItemAmount);
                 itemConfig.Buy.SetResellCount(currentInvItemAmount);
-                if (resellItems)
-                    itemConfig.Buy.SetAutoResell();
 
-                var prefab = MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName);
+                var prefab = MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName); // not sure if this is still needed.
 
                 var result = Sandbox.ModAPI.Ingame.MyStoreInsertResults.Success;
 
@@ -135,6 +132,7 @@ namespace SimpleStoreLite.StoreBlock
 
                 //sell from the players point of view
                 int sellCount = itemConfig.Sell.Count;
+
                 if (prefab == null && sellCount > 0)
                 {
                     itemData = new MyStoreItemData(definition.Id, sellCount, itemConfig.Sell.Price, null, null);
@@ -212,6 +210,9 @@ namespace SimpleStoreLite.StoreBlock
             {
                 if (BlacklistItems.Contains(definition.Id.SubtypeName))
                     continue;
+                if (MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName) != null)
+                    continue;
+
                 subtypeName = FixKey(definition.Id.SubtypeName);
                 match = Regex.Match(definition.Id.TypeId.ToString() + subtypeName, @"[\[\]\r\n|=]");
                 if (match.Success)

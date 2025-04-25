@@ -22,13 +22,9 @@ namespace SimpleStoreLite.StoreBlock
             }
 
             public int Price = 0;
-            private int min = 0;
-            private int max = 0;
-            private bool isRandom = false;
-            private int percent = 100;
-            private bool isPercent = false;
             private bool isAutoResell = false;
             private int resellCount = 0;
+            private bool isSell = false;
 
             public void SetAutoResell()
             {
@@ -42,30 +38,13 @@ namespace SimpleStoreLite.StoreBlock
 
             private int CalculateCount()
             {
-                int value = count;
+                if (isSell)
+                    return count;
+
                 if (isAutoResell)
-                {
-                    value = Math.Max(count, resellCount);
-                }
+                    return resellCount;
 
-                if (isRandom)
-                {
-                    int maxValue = max;
-                    if (isAutoResell)
-                    {
-                        maxValue = Math.Max(max, resellCount);
-                    }
-                    value = rnd.Next(min, maxValue + 1);
-                    value = value < 0 ? 0 : value;
-                }
-
-                if (isPercent)
-                {
-                    if (rnd.Next(1, 101) > percent)
-                        value = 0;
-                }
-
-                return value;
+                return Math.Min(count, resellCount);
             }
 
             public override string ToString()
@@ -73,120 +52,40 @@ namespace SimpleStoreLite.StoreBlock
                 string countStr = $"{Count}";
                 if (isAutoResell)
                     countStr = "A";
-                if (isRandom)
-                    countStr = $"{min}<{max}";
-                if (isRandom && isAutoResell)
-                    countStr = $"{min}<A";
-                if (isPercent)
-                    countStr = $"{percent}%{countStr}";
 
                 return $"{countStr}:{Price}";
             }
-            private bool TryParseCount(string strValue, bool isSell)
+            private bool TryParseCount(string strValue)
             {
                 this.count = 0;
-                this.isRandom = false;
-                this.isPercent = false;
                 this.isAutoResell = false;
                 this.resellCount = 0;
-                this.max = 0;
 
-                string[] percentValue = strValue.Split('%');
-                switch (percentValue.Length)
+                if (strValue.ToUpper() == "A")
                 {
-                    case 1:
-                        {
-                            break;
-                        }
-                    case 2:
-                        {
-                            isPercent = true;
-                            strValue = percentValue[1];
-                            if (!int.TryParse(percentValue[0], out percent))
-                                return false;
-                            percent = Math.Max(Math.Min(percent, 100), 0);
-                            break;
-                        }
+                    if (isSell)
+                        return false;
+
+                    isAutoResell = true;
+                    return true;
                 }
 
-                string[] minMax = strValue.Split('<');
-                switch (minMax.Length)
-                {
-                    case 1:
-                        {
-                            if (minMax[0].ToUpper() == "A")
-                            {
-                                if (isSell)
-                                    return false;
-
-                                isAutoResell = true;
-                                break;
-                            }
-                            string[] maxR = minMax[0].ToUpper().Split('R');
-
-                            if (!int.TryParse(maxR[0], out this.count))
-                                return false;
-                            if (this.count < 0)
-                                return false;
-
-                            if (maxR.Length < 2)
-                                break;
-
-                            if (!isSell)
-                                return false;
-
-                            IsAutoRefine = true;
-
-                            break;
-                        }
-                    case 2:
-                        {
-                            isRandom = true;
-                            if (!int.TryParse(minMax[0], out min))
-                                return false;
-
-                            if (minMax[1].ToUpper() == "A")
-                            {
-                                if (isSell)
-                                    return false;
-
-                                isAutoResell = true;
-                                break;
-                            }
-
-                            string[] maxR = minMax[1].ToUpper().Split('R');
-
-                            if (!int.TryParse(maxR[0], out max))
-                                return false;
-                            if (max < min)
-                                return false;
-
-                            if (maxR.Length < 2)
-                                break;
-
-                            if (!isSell)
-                                return false;
-
-                            IsAutoRefine = true;
-                            break;
-                        }
-                    default:
-                        {
-                            return false;
-                        }
-                }
-
+                if (!int.TryParse(strValue, out this.count))
+                    return false;
+                if (this.count < 0)
+                    return false;
 
                 return true;
             }
 
             public bool TryParse(string raw, bool isSell)
             {
+                this.isSell = isSell;
                 string[] countPrice = raw.Split(':');
                 if (countPrice.Length != 2)
                     return false;
 
-                if (!TryParseCount(countPrice[0], isSell))
+                if (!TryParseCount(countPrice[0]))
                     return false;
 
                 if (!int.TryParse(countPrice[1], out this.Price))
