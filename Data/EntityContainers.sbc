@@ -5,10 +5,10 @@
         <Container>
             <Id>
                 <TypeId>StoreBlock</TypeId>
-                <SubtypeId>SimpleStoreBlock</SubtypeId>
+                <SubtypeId>SimpleStoreLiteBlock</SubtypeId>
             </Id>
             <DefaultComponents>
-                <Component BuilderType="MyObjectBuilder_Inventory" SubtypeId="SimpleStoreBlock" ForceCreate="true"/>
+                <Component BuilderType="MyObjectBuilder_Inventory" SubtypeId="SimpleStoreLiteBlock" ForceCreate="true"/>
             </DefaultComponents>
         </Container>
         
