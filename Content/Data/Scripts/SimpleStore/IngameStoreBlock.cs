@@ -41,6 +41,17 @@ namespace SimpleStoreLite.StoreBlock
         List<IMyPlayer> Players = new List<IMyPlayer>();
         List<Sandbox.ModAPI.Ingame.MyStoreQueryItem> StoreItems = new List<Sandbox.ModAPI.Ingame.MyStoreQueryItem>();
 
+        public void LogMsg(string msg)
+        {
+            MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: {msg}");
+        }
+
+        public void DebugMsg(string msg)
+        {
+            if (debugLog)
+                LogMsg($"[DEBUG] {msg}");
+        }
+
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             NeedsUpdate = MyEntityUpdateEnum.EACH_100TH_FRAME;
@@ -50,7 +61,7 @@ namespace SimpleStoreLite.StoreBlock
             if (!MyAPIGateway.Session.IsServer)
                 return;
 
-            MyLog.Default.WriteLine("SimpleStoreLite.StoreBlock: Loaded...");
+            LogMsg("Loaded...");
         }
 
         public override void UpdateAfterSimulation100()
@@ -82,7 +93,7 @@ namespace SimpleStoreLite.StoreBlock
             if (!UpdateShop && UpdateCounter <= refreshCounterLimit)
                 return;
 
-            MyLog.Default.WriteLine("SimpleStoreLite.StoreBlock: Starting to update store");
+            LogMsg("Starting to update store.");
 
             myStoreBlock.GetPlayerStoreItems(StoreItems);
 
@@ -114,16 +125,15 @@ namespace SimpleStoreLite.StoreBlock
                 if (!itemConfig.TryParse(rawIniValue))
                 {
                     myStoreBlock.Enabled = false;
-                    MyLog.Default.WriteLine("SimpleStore.StoreBlock: Config error in Custom Data.");
+                    LogMsg("Config error in Custom Data.");
 
                     continue;
                 }
 
                 var currentInvItemAmount = MyVisualScriptLogicProvider.GetEntityInventoryItemAmount(myStoreBlock.Name, definition.Id);
-                MyVisualScriptLogicProvider.RemoveFromEntityInventory(myStoreBlock.Name, definition.Id, currentInvItemAmount);
                 itemConfig.Buy.SetResellCount(currentInvItemAmount);
 
-                var prefab = MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName); // not sure if this is still needed.
+                var prefab = MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName);
 
                 var result = Sandbox.ModAPI.Ingame.MyStoreInsertResults.Success;
 
@@ -137,10 +147,10 @@ namespace SimpleStoreLite.StoreBlock
                 {
                     itemData = new MyStoreItemData(definition.Id, sellCount, itemConfig.Sell.Price, null, null);
 
-                    MyLog.Default.WriteLineIf(debugLog, $"SimpleStoreLite.StoreBlock: InsertOrder {definition.Id.SubtypeName}  Count={sellCount} Price={itemConfig.Sell.Price}");
+                    DebugMsg("InsertOrder {definition.Id.SubtypeName}  Count={sellCount} Price={itemConfig.Sell.Price}");
                     result = myStoreBlock.InsertOrder(itemData, out id);
                     if (result != Sandbox.ModAPI.Ingame.MyStoreInsertResults.Success)
-                        MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: Sell result {definition.Id.SubtypeName}: {result}");
+                        LogMsg("Sell result {definition.Id.SubtypeName}: {result}");
                 }
 
                 //buy
@@ -149,14 +159,11 @@ namespace SimpleStoreLite.StoreBlock
                 {
                     itemData = new MyStoreItemData(definition.Id, buyCount, itemConfig.Buy.Price, null, null);
 
-                    MyLog.Default.WriteLineIf(debugLog, $"SimpleStoreLite.StoreBlock: InsertOffer {definition.Id.SubtypeName} Count={buyCount} Price={itemConfig.Buy.Price}");
+                    DebugMsg($"InsertOffer {definition.Id.SubtypeName} Count={buyCount} Price={itemConfig.Buy.Price}");
                     result = myStoreBlock.InsertOffer(itemData, out id);
 
-                    if (result == Sandbox.ModAPI.Ingame.MyStoreInsertResults.Success)
-                        MyVisualScriptLogicProvider.AddToInventory(myStoreBlock.Name, definition.Id, buyCount);
-                    else
-                        MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: Buy result {definition.Id.SubtypeName}: {result}");
-
+                    if (result != Sandbox.ModAPI.Ingame.MyStoreInsertResults.Success)
+                        LogMsg($"Buy result {definition.Id.SubtypeName}: {result}");
                 }
             }
 
@@ -164,12 +171,10 @@ namespace SimpleStoreLite.StoreBlock
             if (UpdateShop)
             {
                 UpdateCounter = rnd.Next((int)(refreshCounterLimit - MinRefreshPeriod * 0.2)); // stop them all refreshing at the same time.
-                MyLog.Default.WriteLineIf(debugLog, $"SimpleStoreLite.StoreBlock: UpdateCounter={UpdateCounter}");
+                DebugMsg($"UpdateCounter={UpdateCounter}");
             }
             UpdateShop = false;
         }
-
-
         private string FixKey(string key)
         {
             return key.Replace('[', '{').Replace(']', '}'); // Replace [ ]  with { } for mods like Better Stone
@@ -177,7 +182,7 @@ namespace SimpleStoreLite.StoreBlock
 
         private void CreateConfig()
         {
-            MyLog.Default.WriteLine("SimpleStoreLite.StoreBlock: Start CreateConfig");
+            LogMsg("Start CreateConfig");
 
             config.Clear();
             config.AddSection(ConfigSettings);
@@ -233,7 +238,7 @@ namespace SimpleStoreLite.StoreBlock
 
         private bool TryLoadConfig()
         {
-            MyLog.Default.WriteLine("SimpleStoreLite.StoreBlock: Loading Config");
+            LogMsg("Loading Config");
 
             bool configOK = true;
             bool storeConfig = false;
@@ -260,7 +265,7 @@ namespace SimpleStoreLite.StoreBlock
                         if (!config.Get(section, key.Name).TryGetString(out rawIniValue))
                         {
                             configOK = false;
-                            MyLog.Default.WriteLine($"SimpleStoreLite.StoreBlock: Failed to get {section}:{key.Name}");
+                            LogMsg("Failed to get {section}:{key.Name}");
                             break;
                         }
                         if (section == ConfigSettings)
@@ -291,7 +296,7 @@ namespace SimpleStoreLite.StoreBlock
 
                 if (!configOK)
                 {
-                    MyLog.Default.WriteLine("SimpleStoreLite.StoreBlock: Config Value error");
+                    LogMsg("Config Value error");
                     myStoreBlock.Enabled = false;
                 }
 
@@ -299,7 +304,7 @@ namespace SimpleStoreLite.StoreBlock
             else
             {
                 configOK = false;
-                MyLog.Default.WriteLine("SimpleStoreLite.StoreBlock: Config Syntax error");
+                LogMsg("Config Syntax error");
                 myStoreBlock.Enabled = false;
             }
             return configOK;
