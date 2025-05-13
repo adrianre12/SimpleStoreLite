@@ -1,12 +1,15 @@
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Definitions;
 using Sandbox.Game;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRage.ModAPI;
@@ -25,21 +28,26 @@ namespace SimpleStoreLite.StoreBlock
         const int DefaultRefreshPeriod = 20; //mins
         const int MinRefreshPeriod = 375;  // 100's of ticks mins * 37.5
 
-        List<string> BlacklistItems = new List<string> { "RestrictedConstruction", "CubePlacerItem", "GoodAIRewardPunishmentTool" };
+        private List<string> BlacklistItems = new List<string> { "RestrictedConstruction", "CubePlacerItem", "GoodAIRewardPunishmentTool" };
 
-        IMyStoreBlock myStoreBlock;
-        MyIni config = new MyIni();
+        private IMyStoreBlock myStoreBlock;
+        private MyIni config = new MyIni();
 
         private static Random rnd = new Random();
 
-        bool lastBlockEnabledState = false;
-        bool UpdateShop = true;
-        int UpdateCounter = 0;
-        int refreshCounterLimit = DefaultRefreshPeriod;
-        bool debugLog = false;
+        private bool lastBlockEnabledState = false;
+        private bool updateShop = true;
+        //        private bool largestStackOnly = false;
+        private int updateCounter = 0;
+        private int refreshCounterLimit = DefaultRefreshPeriod;
+        private bool debugLog = false;
 
-        List<IMyPlayer> Players = new List<IMyPlayer>();
-        List<Sandbox.ModAPI.Ingame.MyStoreQueryItem> StoreItems = new List<Sandbox.ModAPI.Ingame.MyStoreQueryItem>();
+        private List<IMyPlayer> Players = new List<IMyPlayer>();
+        private List<Sandbox.ModAPI.Ingame.MyStoreQueryItem> StoreItems = new List<Sandbox.ModAPI.Ingame.MyStoreQueryItem>();
+
+        private Dictionary<MyDefinitionId, int> inventoryItems = new Dictionary<MyDefinitionId, int>();
+        private HashSet<MyCubeBlock> inventoryBlocks;
+        private IMyInventory myStoreInventory;
 
         public void LogMsg(string msg)
         {
@@ -57,6 +65,7 @@ namespace SimpleStoreLite.StoreBlock
             NeedsUpdate = MyEntityUpdateEnum.EACH_100TH_FRAME;
 
             myStoreBlock = Entity as IMyStoreBlock;
+            myStoreInventory = myStoreBlock.GetInventory(0);
 
             if (!MyAPIGateway.Session.IsServer)
                 return;
@@ -82,17 +91,83 @@ namespace SimpleStoreLite.StoreBlock
                 if (!TryLoadConfig())
                     return;
 
-                UpdateShop = true;
+                updateShop = true;
             }
 
             if (!myStoreBlock.IsWorking)
                 return;
 
-            UpdateCounter++;
+            updateCounter++;
 
-            if (!UpdateShop && UpdateCounter <= refreshCounterLimit)
+            if (!updateShop && updateCounter <= refreshCounterLimit)
                 return;
 
+            GetGridInventory();
+
+            UpdateStore();
+
+            updateCounter = 0;
+            if (updateShop)
+            {
+                updateCounter = rnd.Next((int)(refreshCounterLimit - MinRefreshPeriod * 0.2)); // stop them all refreshing at the same time.
+                DebugMsg($"UpdateCounter={updateCounter}");
+            }
+            updateShop = false;
+        }
+
+        private void GetGridInventory()
+        {
+            LogMsg("Starting GetGridInventory.");
+            inventoryBlocks = (myStoreBlock.CubeGrid as MyCubeGrid).Inventories;
+
+            inventoryItems.Clear();
+
+
+            foreach (var block in inventoryBlocks)
+            {
+                var inv = block.GetInventory(block.InventoryCount - 1) as MyInventory;
+                if (!myStoreInventory.IsConnectedTo(inv))
+                {
+                    continue;
+                }
+
+                DebugMsg($"Block {block.DisplayNameText} invCount={block.InventoryCount} size={inv.ItemCount}");
+
+                foreach (MyPhysicalInventoryItem item in inv.GetItems())
+                {
+                    DebugMsg($"   {item.Content.SubtypeId}  {item.Amount}");
+                    var defId = item.Content.GetId();
+
+                    if (inventoryItems.ContainsKey(defId))
+                    {
+                        /*                        if (largestStackOnly)
+                                                {
+                                                    inventoryItems[defId] = Math.Max(inventoryItems[defId], item.Amount.ToIntSafe());
+                                                }
+                                                else
+                                                { */
+                        inventoryItems[defId] += item.Amount.ToIntSafe();
+                        //                        }
+                    }
+                    else
+                    {
+                        inventoryItems[defId] = item.Amount.ToIntSafe();
+                    }
+                }
+            }
+
+            if (debugLog)
+            {
+                DebugMsg($"InventoryItems {inventoryItems.Count}");
+                foreach (var item in inventoryItems)
+                {
+                    DebugMsg($"Item {item.Key.SubtypeName} ammount {item.Value}");
+                }
+            }
+        }
+
+        private void UpdateStore()
+        {
             LogMsg("Starting to update store.");
 
             myStoreBlock.GetPlayerStoreItems(StoreItems);
@@ -130,7 +205,8 @@ namespace SimpleStoreLite.StoreBlock
                     continue;
                 }
 
-                var currentInvItemAmount = MyVisualScriptLogicProvider.GetEntityInventoryItemAmount(myStoreBlock.Name, definition.Id);
+                //var currentInvItemAmount = MyVisualScriptLogicProvider.GetEntityInventoryItemAmount(myStoreBlock.Name, definition.Id);
+                var currentInvItemAmount = inventoryItems.GetValueOrNew(definition.Id);
                 itemConfig.Buy.SetResellCount(currentInvItemAmount);
 
                 var prefab = MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName);
@@ -167,13 +243,6 @@ namespace SimpleStoreLite.StoreBlock
                 }
             }
 
-            UpdateCounter = 0;
-            if (UpdateShop)
-            {
-                UpdateCounter = rnd.Next((int)(refreshCounterLimit - MinRefreshPeriod * 0.2)); // stop them all refreshing at the same time.
-                DebugMsg($"UpdateCounter={UpdateCounter}");
-            }
-            UpdateShop = false;
         }
         private string FixKey(string key)
         {
