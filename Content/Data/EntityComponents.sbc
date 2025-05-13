@@ -7,7 +7,7 @@
                 <TypeId>Inventory</TypeId>
                 <SubtypeId>SimpleStoreLiteBlock</SubtypeId>
             </Id>
-            <Size x="100" y="100" z="100" />
+            <Size x="1" y="1" z="1" />
         </EntityComponent>
 
     </EntityComponents>
