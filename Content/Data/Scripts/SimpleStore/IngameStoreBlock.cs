@@ -28,7 +28,7 @@ namespace SimpleStoreLite.StoreBlock
         const int DefaultRefreshPeriod = 20; //mins
         const int MinRefreshPeriod = 375;  // 100's of ticks mins * 37.5
 
-        private List<string> BlacklistItems = new List<string> { "RestrictedConstruction", "CubePlacerItem", "GoodAIRewardPunishmentTool" };
+        private List<string> BlacklistItems = new List<string> { "RestrictedConstruction", "CubePlacerItem", "GoodAIRewardPunishmentTool", "SpaceCredit" };
 
         private IMyStoreBlock myStoreBlock;
         private MyIni config = new MyIni();
@@ -37,12 +37,10 @@ namespace SimpleStoreLite.StoreBlock
 
         private bool lastBlockEnabledState = false;
         private bool updateShop = true;
-        //        private bool largestStackOnly = false;
         private int updateCounter = 0;
         private int refreshCounterLimit = DefaultRefreshPeriod;
         private bool debugLog = false;
 
-        private List<IMyPlayer> Players = new List<IMyPlayer>();
         private List<Sandbox.ModAPI.Ingame.MyStoreQueryItem> StoreItems = new List<Sandbox.ModAPI.Ingame.MyStoreQueryItem>();
 
         private Dictionary<MyDefinitionId, int> inventoryItems = new Dictionary<MyDefinitionId, int>();
@@ -273,6 +271,7 @@ namespace SimpleStoreLite.StoreBlock
             config.AddSection("OxygenContainerObject");
             config.AddSection("GasContainerObject");
             config.AddSection("ConsumableItem");
+            config.AddSection("PhysicalObject");
 
             string section;
             Match match;
@@ -346,6 +345,7 @@ namespace SimpleStoreLite.StoreBlock
                         {
                             config.Set(section, key.Name, itemConfig.ToString());
                             storeConfig = true;
+                            configOK = false;
                             continue;
                         }
 
