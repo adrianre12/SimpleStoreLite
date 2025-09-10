@@ -28,7 +28,8 @@ namespace SimpleStoreLite.StoreBlock
         const int DefaultRefreshPeriod = 20; //mins
         const int MinRefreshPeriod = 375;  // 100's of ticks mins * 37.5
 
-        private List<string> BlacklistItems = new List<string> { "RestrictedConstruction", "CubePlacerItem", "GoodAIRewardPunishmentTool", "SpaceCredit" };
+        private List<string> BlacklistItems = new List<string> { "RestrictedConstruction", "CubePlacerItem", "GoodAIRewardPunishmentTool", "SpaceCredit", "SkeletonKey", "UraniumB" };
+        private List<string> WhitelistItems = new List<string> { "NATO_5p56x45mm", "Organic", "Scrap" };
 
         private IMyStoreBlock myStoreBlock;
         private MyIni config = new MyIni();
@@ -278,7 +279,7 @@ namespace SimpleStoreLite.StoreBlock
 
             ItemConfig defaultItemConfig = new ItemConfig();
             string subtypeName = "";
-
+            bool ok;
             foreach (var definition in MyDefinitionManager.Static.GetAllDefinitions())
             {
                 if (BlacklistItems.Contains(definition.Id.SubtypeName))
@@ -295,8 +296,22 @@ namespace SimpleStoreLite.StoreBlock
 
                 if (config.ContainsSection(section))
                 {
-                    defaultItemConfig.SetDefaultPrices(definition.Id);
-                    config.Set(section, subtypeName, defaultItemConfig.ToString());
+                    ok = false;
+                    /*                    if (!definition.Public && MyDefinitionManager.Static.GetPrefabDefinition(definition.Id.SubtypeName) != null)
+                                        {
+                                            ok = true;
+                                        }*/
+                    if (WhitelistItems.Contains(definition.Id.SubtypeName) || (definition.Public && MyDefinitionManager.Static.GetPhysicalItemDefinition(definition.Id).CanPlayerOrder))
+                    {
+                        ok = true;
+                    }
+                    if (ok)
+                    {
+                        defaultItemConfig.SetDefaultPrices(definition.Id);
+                        config.Set(section, subtypeName, defaultItemConfig.ToString());
+                        continue;
+                    }
+                    LogMsg($"skipping {subtypeName} public={definition.Public}");
                 }
             }
 
