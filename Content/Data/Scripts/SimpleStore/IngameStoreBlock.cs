@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Definitions.SessionComponents;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Game.ModAPI.Ingame.Utilities;
@@ -47,6 +48,7 @@ namespace SimpleStoreLite.StoreBlock
         private Dictionary<MyDefinitionId, int> inventoryItems = new Dictionary<MyDefinitionId, int>();
         private HashSet<MyCubeBlock> inventoryBlocks;
         private IMyInventory myStoreInventory;
+        private float transactionFee = 0.02f;
 
         public void LogMsg(string msg)
         {
@@ -61,7 +63,7 @@ namespace SimpleStoreLite.StoreBlock
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
-            NeedsUpdate = MyEntityUpdateEnum.EACH_100TH_FRAME;
+            NeedsUpdate = MyEntityUpdateEnum.BEFORE_NEXT_FRAME;
 
             myStoreBlock = Entity as IMyStoreBlock;
             myStoreInventory = myStoreBlock.GetInventory(0);
@@ -70,6 +72,22 @@ namespace SimpleStoreLite.StoreBlock
                 return;
 
             LogMsg("Loaded...");
+        }
+
+        public override void UpdateOnceBeforeFrame()
+        {
+            base.UpdateOnceBeforeFrame();
+            NeedsUpdate = MyEntityUpdateEnum.EACH_100TH_FRAME;
+            if (!MyAPIGateway.Session.IsServer)
+                return;
+
+            var x = MyDefinitionManager.Static.GetDefinition<MySessionComponentEconomyDefinition>("Default");
+            if (x != null)
+            {
+                transactionFee = x.TransactionFee;
+                //LogMsg($"SimpleStore.StoreBlock: TransactionFee loaded ({transactionFee})");
+            }
+
         }
 
         public override void UpdateAfterSimulation100()
@@ -222,17 +240,18 @@ namespace SimpleStoreLite.StoreBlock
                 {
                     itemData = new MyStoreItemData(definition.Id, sellCount, itemConfig.Sell.Price, null, null);
 
-                    DebugMsg("InsertOrder {definition.Id.SubtypeName}  Count={sellCount} Price={itemConfig.Sell.Price}");
+                    DebugMsg($"InsertOrder {definition.Id.SubtypeName}  Count={sellCount} Price={itemConfig.Sell.Price}");
                     result = myStoreBlock.InsertOrder(itemData, out id);
                     if (result != Sandbox.ModAPI.Ingame.MyStoreInsertResults.Success)
-                        LogMsg("Sell result {definition.Id.SubtypeName}: {result}");
+                        LogMsg($"Sell result {definition.Id.SubtypeName}: {result}");
                 }
 
                 //buy
                 int buyCount = itemConfig.Buy.Count;
                 if (buyCount > 0)
                 {
-                    itemData = new MyStoreItemData(definition.Id, buyCount, itemConfig.Buy.Price, null, null);
+                    itemData = new MyStoreItemData(definition.Id, buyCount, itemConfig.Buy.Price,
+                        (amount, left, totalPrice, sellerPlayerId, playerId) => OnTransactionBuy(amount, left, totalPrice, sellerPlayerId, playerId, definition), null);
 
                     DebugMsg($"InsertOffer {definition.Id.SubtypeName} Count={buyCount} Price={itemConfig.Buy.Price}");
                     result = myStoreBlock.InsertOffer(itemData, out id);
@@ -243,6 +262,14 @@ namespace SimpleStoreLite.StoreBlock
             }
 
         }
+
+        private void OnTransactionBuy(int amountBought, int amountRemaining, long priceOfTransaction, long ownerOfBlock, long buyerSeller, MyDefinitionBase compDef)
+        {
+            DebugMsg($"SimpleStore.StoreBlock: OnTransactionBuy {compDef.Id.TypeId} {compDef.Id.SubtypeName}");
+
+            MyAPIGateway.Multiplayer.Players.RequestChangeBalance(ownerOfBlock, (long)(priceOfTransaction * transactionFee));
+        }
+
         private string FixKey(string key)
         {
             return key.Replace('[', '{').Replace(']', '}'); // Replace [ ]  with { } for mods like Better Stone
