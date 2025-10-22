@@ -217,7 +217,7 @@ namespace SimpleStoreLite.StoreBlock
                 if (!itemConfig.TryParse(rawIniValue))
                 {
                     myStoreBlock.Enabled = false;
-                    LogMsg("Config error in Custom Data.");
+                    LogMsg($"Config error in Custom Data. Grid='{myStoreBlock.CubeGrid.CustomName}' Store='{myStoreBlock.CustomName}'");
 
                     continue;
                 }
@@ -407,7 +407,7 @@ namespace SimpleStoreLite.StoreBlock
 
                 if (!configOK)
                 {
-                    LogMsg("Config Value error");
+                    LogMsg($"Config error. Grid='{myStoreBlock.CubeGrid.CustomName}' Store='{myStoreBlock.CustomName}'");
                     myStoreBlock.Enabled = false;
                 }
 
